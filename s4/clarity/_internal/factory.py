@@ -1,6 +1,6 @@
 # Copyright 2016 Semaphore Solutions, Inc.
 # ---------------------------------------------------------------------------
-from typing import List, Iterable, Tuple, Optional, Type
+from typing import List, Iterable, Tuple, Optional, Type, TypeVar, Generic
 
 from six.moves.urllib.parse import urlencode
 from s4.clarity import ClarityException, ETree
@@ -18,7 +18,10 @@ class MultipleMatchingElements(ClarityException):
     pass
 
 
-class ElementFactory(object):
+T = TypeVar('T')
+
+
+class ElementFactory(Generic[T]):
     """
     Provides access to a Clarity API endpoint. Implements conversion between XML and ClarityElement
     as well as caching and network services.
@@ -36,7 +39,7 @@ class ElementFactory(object):
 
     def __init__(self,
                  lims,          # type: s4.clarity.LIMS
-                 element_class  # type: Type[ClarityElement]
+                 element_class  # type: Type[T]
                  ):
         """
         Creates a new factory for `element_class`, intended to be used by/with the provided 
@@ -69,13 +72,13 @@ class ElementFactory(object):
         lims.factories[element_class] = self
 
     def new(self, **kwargs):
-        # type: (**str) -> ClarityElement
+        # type: (**str) -> T
         """
-        Create a new ClarityElement pre-populated with the provided values.
+        Create a new T pre-populated with the provided values.
         This object has yet to be persisted to Clarity.
 
         :param kwargs: Key/Value list of attribute name/value pairs to initialize the element with.
-        :return: A new ClarityElement, pre-populated with provided values.
+        :return: A new element of type T, pre-populated with provided values.
         """
 
         # creating some types requires using special tag, ie samples
@@ -93,7 +96,7 @@ class ElementFactory(object):
         return new_obj
 
     def add(self, element):
-        # type: (ClarityElement) -> ClarityElement
+        # type: (T) -> T
         """
         Add an element to the Factory's internal cache and persist it back to Clarity.
 
@@ -106,7 +109,7 @@ class ElementFactory(object):
         return element
 
     def delete(self, element):
-        # type: (ClarityElement) -> None
+        # type: (T) -> None
         """
         Delete an element from the Factory's internal cache and delete it from Clarity.
 
@@ -145,7 +148,7 @@ class ElementFactory(object):
         return bool(self.batch_flags & BatchFlags.QUERY)
 
     def from_link_node(self, xml_node):
-        # type: (ETree.Element) -> Optional[ClarityElement]
+        # type: (ETree.Element) -> Optional[T]
         """
         Will return the ClarityElement described by the link node.
 
@@ -159,7 +162,7 @@ class ElementFactory(object):
         return obj
 
     def from_link_nodes(self, xml_nodes):
-        # type: (List[ETree.Element]) -> List[ClarityElement]
+        # type: (List[ETree.Element]) -> List[T]
         """
         Will return the ClarityElements described by the link nodes.
 
@@ -175,7 +178,7 @@ class ElementFactory(object):
         return objs
 
     def from_limsid(self, limsid, force_full_get=False):
-        # type: (str, bool) -> ClarityElement
+        # type: (str, bool) -> T
         """
         Returns the ClarityElement with the specified limsid.
         """
@@ -184,7 +187,7 @@ class ElementFactory(object):
         return self.get(uri, limsid=limsid, force_full_get=force_full_get)
 
     def get_by_name(self, name):
-        # type: (str) -> ClarityElement
+        # type: (str) -> T
         """
         Queries for a ClarityElement that is described by the unique name.
         An exception is raised if there is no match or more than one match.
@@ -201,7 +204,7 @@ class ElementFactory(object):
         return matches[0]
 
     def get(self, uri, force_full_get=False, name=None, limsid=None):
-        # type: (str, bool, str, str) -> ClarityElement
+        # type: (str, bool, str, str) -> T
         """
         Returns the cached ClarityElement described by the provide uri. If the
         element does not exist a new cache entry will be created with the provided
@@ -223,7 +226,7 @@ class ElementFactory(object):
         return obj
 
     def post(self, element):
-        # type: (ClarityElement) -> None
+        # type: (T) -> None
         """
         Posts the current state of the ClarityElement back to Clarity.
         """
@@ -231,7 +234,7 @@ class ElementFactory(object):
         element.post_and_parse(self.uri)
 
     def batch_fetch(self, elements):
-        # type: (Iterable[ClarityElement]) -> List[ClarityElement]
+        # type: (Iterable[T]) -> List[T]
         """
         Updates the content of all ClarityElements with the current state from Clarity.
         Syntactic sugar for batch_get([e.uri for e in elements])
@@ -242,7 +245,7 @@ class ElementFactory(object):
         return self.batch_get([e.uri for e in elements])
 
     def batch_get_from_limsids(self, limsids):
-        # type: (Iterable[str]) -> List[ClarityElement]
+        # type: (Iterable[str]) -> List[T]
         """
         Return a list of ClarityElements for a given list of limsids
 
@@ -253,7 +256,7 @@ class ElementFactory(object):
         return self.batch_get([self.uri + "/" + limsid for limsid in limsids])
 
     def batch_get(self, uris, prefetch=True):
-        # type: (Iterable[str], bool) -> List[ClarityElement]
+        # type: (Iterable[str], bool) -> List[T]
         """
         Queries Clarity for a list of uris described by their REST API endpoint.
         If this query can be made as a single request it will be done that way.
@@ -321,7 +324,7 @@ class ElementFactory(object):
         return self.uri, self.element_class.UNIVERSAL_TAG.split('}', 2)[1]
 
     def all(self, prefetch=True):
-        # type: (bool) -> List[ClarityElement]
+        # type: (bool) -> List[T]
         """
         Queries Clarity for all ClarityElements associated with the Factory.
 
@@ -331,7 +334,7 @@ class ElementFactory(object):
         return self.query(prefetch)
 
     def query(self, prefetch=True, **params):
-        # type: (bool, **str) -> List[ClarityElement]
+        # type: (bool, **str) -> List[T]
         """
         Queries Clarity for ClarityElements associated with the Factory.
         The query will be made with the provided parameters encoded in the url.
@@ -392,7 +395,7 @@ class ElementFactory(object):
         return [e.uri for e in self.query(False, **params)]
 
     def batch_update(self, elements):
-        # type: (Iterable[ClarityElement]) -> None
+        # type: (Iterable[T]) -> None
         """
         Persists the ClarityElements back to Clarity. Will preform
         this action as a single query if possible.
@@ -417,7 +420,7 @@ class ElementFactory(object):
                 self.lims.request('post', el.uri, el.xml_root)
 
     def batch_create(self, elements):
-        # type: (Iterable[ClarityElement]) -> List[ClarityElement]
+        # type: (Iterable[T]) -> List[T]
         """
         Creates new records in Clarity for each element and returns these new records as ClarityElements.
         If this operation can be performed in a single network operation it will be.
@@ -454,7 +457,7 @@ class ElementFactory(object):
             return objects
 
     def batch_refresh(self, elements):
-        # type: (Iterable[ClarityElement]) -> None
+        # type: (Iterable[T]) -> None
         """
         Loads the current state of the elements from Clarity. Any changes made
         to these artifacts that has not been pushed to Clarity will be lost.
@@ -469,7 +472,7 @@ class ElementFactory(object):
         self.batch_fetch(elements)
 
     def batch_invalidate(self, elements):
-        # type: (Iterable[ClarityElement]) -> None
+        # type: (Iterable[T]) -> None
         """
         Clears the current local state for all elements.
         :param elements: The ClarityElements that are to have their current state cleared.
