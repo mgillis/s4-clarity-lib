@@ -1,6 +1,7 @@
 # Copyright 2016 Semaphore Solutions, Inc.
 # ---------------------------------------------------------------------------
 from typing import List, Iterable, Tuple, Optional, Type, TypeVar, Generic
+from typing import List, Iterable, Tuple, Optional, Type
 
 from six.moves.urllib.parse import urlencode
 from s4.clarity import ClarityException, ETree
