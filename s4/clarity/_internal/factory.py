@@ -19,7 +19,7 @@ class MultipleMatchingElements(ClarityException):
     pass
 
 
-T = TypeVar('T')
+T = TypeVar('T', bound=ClarityElement)
 
 
 class ElementFactory(Generic[T]):
